@@ -216,8 +216,11 @@ render_flash();
 ?>
 <?php if ($error !== ''): ?><div class="alert error" role="alert"><?= e($error) ?></div><?php endif; ?>
 <?php if (!$isCourier): ?>
-<section class="panel">
-    <h2>Regjistro porosi manuale</h2>
+<section class="panel manual-order-panel" aria-labelledby="manual-order-heading">
+    <div class="panel-heading-copy">
+        <h2 id="manual-order-heading">Regjistro porosi manuale</h2>
+        <p class="panel-intro">Plotësoni të dhënat e klientit dhe shtoni produktet për të regjistruar një porosi të re.</p>
+    </div>
     <form method="post" id="manual-order-form">
         <?= csrf_field() ?><input type="hidden" name="action" value="create_manual">
         <div class="form-grid">
@@ -265,8 +268,8 @@ orderItems.addEventListener('click', (event) => {
 });
 </script>
 <?php endif; ?>
-<section class="panel">
-    <h2><?= $isCourier ? 'Porositë e caktuara për ju' : 'Porositë aktive' ?></h2>
+<section class="panel active-orders-panel" aria-labelledby="active-orders-heading">
+    <h2 id="active-orders-heading"><?= $isCourier ? 'Porositë e caktuara për ju' : 'Porositë aktive' ?></h2>
     <?php if ($orders === []): ?><p class="empty">Nuk ka porosi aktive në këtë listë.</p>
     <?php else: ?><div class="table-wrap"><table><thead><tr><th>Porosia / Klienti</th><th>Artikujt</th><th>Adresa</th><?php if ($canViewRevenue): ?><th>Totali</th><?php endif; ?><th>Kurieri</th><th>Statusi & veprimet</th></tr></thead><tbody>
     <?php foreach ($orders as $order): ?>

@@ -7,6 +7,7 @@ $navigation = [
         ['shitjet.php', '↗', 'Porositë aktive'],
         ['historiku.php', '◷', 'Historiku'],
         ['raportet.php', '▤', 'Raportet'],
+        ['ofertat.php', '◇', 'Setet & ofertat'],
         ['mesazhet.php', '✉', 'Mesazhet'],
         ['perdoruesit.php', '♙', 'Përdoruesit'],
         ['cilesimet.php', '⚙', 'Cilësimet'],
@@ -29,7 +30,8 @@ $currentPage = basename($_SERVER['SCRIPT_NAME'] ?? '');
 ?>
 <aside class="sidebar">
     <a class="brand" href="<?= e(app_url('/admin/' . ($role === 'kurier' ? 'shitjet.php' : 'dashboard.php'))) ?>">
-        <span class="brand-flower">✿</span><span><strong>HerbaBloom</strong><small>pharmacy & botanicals</small></span>
+        <img class="brand-flower" src="<?= e(app_url('/web-images/herbabloom-favicon.svg')) ?>" alt="" aria-hidden="true">
+        <span><strong>HerbaBloom</strong><small>Barnatorja bimore</small></span>
     </a>
     <nav aria-label="Navigimi kryesor">
         <?php foreach ($navigation[$role] ?? [] as [$file, $icon, $label]): ?>

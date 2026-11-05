@@ -27,9 +27,11 @@ function admin_header(string $title): void
     $pageTitle = e($title);
     echo '<!doctype html><html lang="sq"><head><meta charset="utf-8">';
     echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
+    echo '<meta name="theme-color" content="#344a38">';
     echo '<title>' . $pageTitle . ' · HerbaBloom</title>';
+    echo '<link rel="icon" type="image/svg+xml" href="' . e(app_url('/web-images/herbabloom-favicon.svg')) . '">';
     echo '<link rel="preconnect" href="https://fonts.googleapis.com">';
-    echo '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">';
+    echo '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">';
     echo '<link rel="stylesheet" href="' . e(app_url('/admin/style.css')) . '"></head><body>';
     echo '<div class="app-shell">';
     require __DIR__ . '/sidebar.php';
@@ -39,7 +41,7 @@ function admin_header(string $title): void
 
 function admin_footer(): void
 {
-    echo '</main></div></body></html>';
+    echo '</main></div><script src="' . e(app_url('/admin/admin-motion.js')) . '" defer></script></body></html>';
 }
 
 function flash_message(string $message, string $type = 'success'): void

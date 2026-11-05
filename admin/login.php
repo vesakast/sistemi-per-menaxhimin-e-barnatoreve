@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare(
                 'INSERT INTO me_audit_log (perdorues_id, perdoruesi, veprimi, ip) VALUES (?, ?, ?, ?)'
             )->execute([$user['id'], substr($user['username'], 0, 50), 'Hyrje e suksesshme', $ip]);
+            unset($_SESSION['customer_id'], $_SESSION['customer_last_activity']);
             session_regenerate_id(true);
             $_SESSION['user_id'] = (int) $user['id'];
             $_SESSION['username'] = $user['username'];
@@ -155,14 +156,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="sq">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#344a38">
     <title>Hyrja e stafit · HerbaBloom</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="<?= e(app_url('/web-images/herbabloom-favicon.svg')) ?>">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= e(app_url('/admin/style.css')) ?>">
 </head>
 <body class="auth-page">
 <main class="auth-card">
     <p class="eyebrow">Panel i sigurt për stafin</p>
-    <h1>✿ HerbaBloom</h1>
+    <h1><img class="login-brand-flower" src="<?= e(app_url('/web-images/herbabloom-favicon.svg')) ?>" alt="" aria-hidden="true"> HerbaBloom</h1>
     <p class="help"><?= $stage === 'otp' ? 'Shkruani kodin 6-shifror të dërguar në email-in e verifikimit.' : 'Hyni për të menaxhuar farmacinë.' ?></p>
     <?php if ($error !== ''): ?><div class="alert error" role="alert"><?= e($error) ?></div><?php endif; ?>
     <form method="post" autocomplete="off">

@@ -33,30 +33,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 $success = (bool) ($_SESSION['_contact_success'] ?? false);
 unset($_SESSION['_contact_success']);
-$store = $pdo->query('SELECT emri_dyqanit, email, telefoni, adresa FROM me_cilesimet WHERE id=1')->fetch();
+$store = $pdo->query('SELECT emri_dyqanit, email, telefoni FROM me_cilesimet WHERE id=1')->fetch();
+$adminContact = $pdo->query(
+    "SELECT email, telefoni FROM me_perdoruesit
+     WHERE rooli='admin' AND statusi='Aktiv' ORDER BY id LIMIT 1"
+)->fetch();
+$contactEmail = trim((string) ($store['email'] ?? '')) ?: trim((string) ($adminContact['email'] ?? ''));
+$contactPhone = trim((string) ($store['telefoni'] ?? '')) ?: trim((string) ($adminContact['telefoni'] ?? ''));
 
-web_header('Kontakti');
+web_header('Kontakt');
 ?>
-<p class="eyebrow">Jemi këtu për ju</p><h1 class="page-title">Na kontaktoni</h1>
+<section class="page-intro" data-reveal><p class="eyebrow">Ndihmë nga HerbaBloom</p><h1 class="page-title">Na shkruaj, jemi këtu për ty</h1><p>Ke pyetje për katalogun, porosinë apo dërgesën? Dërgo një mesazh dhe ekipi ynë do të të përgjigjet sa më shpejt që të jetë e mundur.</p></section>
 <div class="content-grid">
     <section class="glass-card">
-        <?php if ($success): ?><div class="alert" role="status">Mesazhi u dërgua me sukses. Do t'ju kontaktojmë së shpejti.</div><?php endif; ?>
+        <?php if ($success): ?><div class="alert" role="status">Faleminderit që na shkrove. Mesazhi u dërgua dhe do të të kontaktojmë sa më shpejt.</div><?php endif; ?>
         <?php if ($error !== ''): ?><div class="alert error" role="alert"><?= e($error) ?></div><?php endif; ?>
         <form method="post" class="form-stack">
             <input type="hidden" name="_csrf_token" value="<?= e(csrf_token()) ?>">
-            <div class="field"><label for="name">Emri</label><input id="name" name="emri" maxlength="100" required></div>
-            <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" maxlength="100" required></div>
-            <div class="field"><label for="subject">Subjekti</label><input id="subject" name="subjekti" maxlength="150" required></div>
-            <div class="field"><label for="message">Mesazhi</label><textarea id="message" name="mesazhi" maxlength="10000" required></textarea></div>
+            <div class="field"><label for="name">Emri yt</label><input id="name" name="emri" maxlength="100" autocomplete="name" required></div>
+            <div class="field"><label for="email">Adresa e email-it</label><input id="email" name="email" type="email" maxlength="100" autocomplete="email" required></div>
+            <div class="field"><label for="subject">Për çfarë dëshiron të na shkruash?</label><input id="subject" name="subjekti" maxlength="150" required></div>
+            <div class="field"><label for="message">Mesazhi yt</label><textarea id="message" name="mesazhi" maxlength="10000" placeholder="Na trego si mund të të ndihmojmë." required></textarea></div>
             <div hidden aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
-            <button class="btn" type="submit">Dërgo mesazhin</button>
+            <button class="btn" type="submit">Dërgo kërkesën</button>
         </form>
     </section>
-    <aside class="glass-card"><h2>HerbaBloom</h2>
-        <?php if ($store): ?><p><?= e($store['adresa'] ?? 'Na kontaktoni për adresën e dyqanit.') ?></p>
-            <?php if ($store['email']): ?><p>Email: <a href="mailto:<?= e($store['email']) ?>"><?= e($store['email']) ?></a></p><?php endif; ?>
-            <?php if ($store['telefoni']): ?><p>Tel: <?= e($store['telefoni']) ?></p><?php endif; ?>
-        <?php else: ?><p>Na shkruani për pyetje rreth produkteve dhe porosive.</p><?php endif; ?>
+    <aside class="glass-card"><h2>Si mund të të ndihmojmë?</h2>
+        <p>HerbaBloom është dyqan online me produkte bimore, suplemente dhe artikuj për kujdes personal. Nuk ofrojmë vizita në adresë fizike.</p>
+        <p>Mund të na kontaktosh para ose pas porosisë për sqarime rreth informacionit në katalog, pagesës në dorëzim apo përcjelljes së dërgesës.</p>
+        <?php if ($contactEmail !== ''): ?><p>Email: <a href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a></p><?php endif; ?>
+        <?php if ($contactPhone !== ''): ?><p>Tel: <a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $contactPhone) ?? '') ?>"><?= e($contactPhone) ?></a></p><?php endif; ?>
+        <?php if ($contactEmail === '' && $contactPhone === ''): ?><p>Përdor formularin në të majtë dhe përfshi detajet që na ndihmojnë ta kuptojmë kërkesën tënde.</p><?php endif; ?>
     </aside>
 </div>
 <?php web_footer(); ?>

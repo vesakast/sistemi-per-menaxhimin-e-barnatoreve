@@ -3,7 +3,7 @@
 **Projekti:** HerbaBloom – Sistemi për menaxhimin e barnatores bimore
 **Studentja:** Vesa Kastrati
 
-> Ky dokument përmbledh dizajnin dhe funksionet e projektit aktual. README-ja dhe ky dokument ndihmojnë për përgatitjen e raportit; prezantimi duhet të përmbajë edhe demonstrim të drejtpërdrejtë të artefakteve.
+> Ky dokument përmbledh dizajnin dhe funksionet e projektit aktual. README-ja dhe ky dokument ndihmojnë për përgatitjen e raportit; demonstrimi i drejtpërdrejtë i artefakteve me profesorin do të bëhet gjatë prezantimit.
 
 ## 1. Problemi dhe përdoruesit
 
@@ -29,6 +29,10 @@ Përdoruesit kryesorë janë:
 | FR-07 | Administratori menaxhon stafin dhe cilësimet globale. | Rolet jo-admin kanë qasje vetëm-lexim ose nuk kanë qasje, sipas faqes. |
 | FR-08 | Sistemi paraqet raporte financiare vetëm për administratorin. | Farmacisti dhe kurieri nuk marrin fushat financiare në pamjet/API-në e stafit; gjurmimi publik kthen përmbledhjen e porosisë për klientin. |
 | FR-09 | Anulimi i porosisë rikthen stokun në batch-et fillestare. | Transaksioni regjistron lëvizje të tipit anulim dhe nuk lejon gjendje të pjesshme. |
+| FR-10 | Klienti mund të krijojë llogari, të shohë porositë e veta dhe të ruajë produkte të preferuara. | Llogaria lidhet me porositë përmes `klient_id`; endpoint-et e klientit kërkojnë sesion dhe veprimet e shkrimit token CSRF. |
+| FR-11 | Klienti mund të zgjedhë preferencat për njoftime; administratori mund të konfigurojë sete/oferta me produkte të katalogut. | Pëlqimet dhe përbërja e seteve ruhen në databazë; çmimet dhe përbërësit validohen në server. |
+| FR-12 | Dyqani paraqet katalog, kërkim, sete/oferta dhe bestseller-a. | Produktet dhe ofertat lexohen nga databaza; bestseller-at bazohen në shitje të porosive të dorëzuara. |
+| FR-13 | Administratori mund të caktojë imazhe për produkte dhe oferta; dyqani mund të përdorë gjithashtu asete lokale. | URL-ja ruhet në kolonën përkatëse dhe faqet përdorin imazhin ose placeholder-in kur mungon. |
 
 ## 3. Kërkesat jofunksionale
 
@@ -82,6 +86,11 @@ erDiagram
     me_njoftimet ||--o{ me_njoftimet_lexuara : "njoftim_id"
     me_perdoruesit ||--o{ me_njoftimet_lexuara : "perdorues_id"
     me_perdoruesit ||--o{ me_otp_kodet : "perdorues_id"
+    me_klientet ||--o{ me_porosite_online : "klient_id, opsional"
+    me_klientet ||--o{ me_klient_favorites : "klient_id"
+    me_klientet ||--o| me_klient_preferencat : "klient_id"
+    me_ofertat ||--o{ me_oferta_items : "oferta_id"
+    me_produktet ||--o{ me_oferta_items : "produkt_id"
 ```
 
 - `id` është çelës primar në tabelat përkatëse; tabela `me_njoftimet_lexuara` përdor çelës të përbërë (`njoftim_id`, `perdorues_id`).
@@ -90,10 +99,10 @@ erDiagram
 - `me_stoku_batch` është burimi i sasive dhe datave të skadencës; pamja `me_produktet_stoku` llogarit stokun e vlefshëm.
 - `me_stoku_levizjet` ruan ngjarjet e stokut. Në skemën lokale `porosia_id` dhe `nga_user_id` nuk shfaqen si foreign key të deklaruara.
 
-**Shënim për saktësinë:** Skema lokale dokumentohet te `database/schema.sql` dhe përmban strukturën aktuale `me_`, pa të dhëna aplikacioni. Versioni fillestar i databazës nuk gjendet në repository, prandaj nuk pretendohet krahasim historik.
+**Shënim për saktësinë:** Skema lokale dokumentohet te `database/schema.sql` dhe përmban strukturën aktuale `me_`, pa rreshta të katalogut, porosive apo llogarive. Për databazat ekzistuese, migrimi `001_customers_and_offers.sql` shton llogaritë/ofertat dhe lidhjen opsionale të porosive me klientët; migrimi `002_offer_images.sql` shton `me_ofertat.imazhi` nëse mungon. Imazhet e produktit përdorin `me_produktet.imazhi`.
 
 ## 7. Fusha e projektit dhe kalimi në Raportin 2
 
-Fusha përfshin panelin e stafit, dyqanin, API-në, porositë, menaxhimin e batch-eve, njoftimet dhe cilësimet. Integrimi me ofrues real pagesash/kuriersh nuk pretendohet; pagesa është me para në dorëzim dhe kurieri caktohet brenda sistemit.
+Fusha aktuale përfshin panelin e ridizajnuar të stafit, dyqanin responsive, API-në, porositë, menaxhimin e batch-eve, njoftimet, cilësimet, llogaritë e klientëve, të preferuarat, preferencat, bestseller-at, asetet vizuale dhe setet/ofertat. Funksionet e klientit/ofertave janë zgjerim i fushës fillestare dhe aktivizohen në instalimet ekzistuese përmes migrimeve përkatëse. Integrimi me ofrues real pagesash/kuriersh nuk pretendohet; pagesa është me para në dorëzim dhe kurieri caktohet brenda sistemit.
 
-Për Raportin 2 fokusi kalon te dëshmia e implementimit: lidhja PDO me databazën reale, endpoint-et JSON, validimi dhe gabimet HTTP, autorizimi sipas roleve, transaksionet e stokut dhe demonstrimi në klient API. Repository aktual ka një commit fillestar, prandaj nuk duhet paraqitur si histori progresi me faza që nuk janë regjistruar.
+Për Raportin 2 fokusi kalon te dëshmia e implementimit: lidhja PDO me databazën, endpoint-et JSON, validimi dhe gabimet HTTP, autorizimi sipas roleve, transaksionet e stokut dhe demonstrimi në klient API. Historiku në GitHub përmban disa commit-e, por nuk duhet paraqitur si histori e plotë e çdo faze të zhvillimit. Databaza lokale ekzistuese është kontrolluar dhe përdoret për projektin; demonstrimi me profesorin do të bëhet gjatë prezantimit.

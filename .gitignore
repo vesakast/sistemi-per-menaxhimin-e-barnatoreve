@@ -2,3 +2,18 @@
 .env.*
 !.env.example
 /vendor/
+/web-images/*
+!/web-images/.gitkeep
+
+# Local logs, temporary files, and backups
+*.log
+*.tmp
+*.bak
+/error_log
+
+# Operating system and editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

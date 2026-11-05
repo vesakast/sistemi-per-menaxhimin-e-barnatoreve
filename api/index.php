@@ -94,6 +94,52 @@ function api_user(PDO $pdo, array $roles = [], bool $enforcePasswordChange = tru
     return $user;
 }
 
+function api_customer_schema_ready(PDO $pdo): bool
+{
+    $query = $pdo->query(
+        "SELECT
+            (SELECT COUNT(DISTINCT TABLE_NAME) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME IN (
+                 'me_klientet','me_klient_favorites','me_klient_preferencat',
+                 'me_klient_login_tentativa','me_ofertat','me_oferta_items'
+               )) AS table_count,
+            (SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE()
+               AND TABLE_NAME='me_porosite_online' AND COLUMN_NAME='klient_id') AS order_owner_column"
+    );
+    $schema = $query->fetch();
+    return (int) $schema['table_count'] === 6 && (int) $schema['order_owner_column'] === 1;
+}
+
+function api_customer(PDO $pdo): array
+{
+    if (!api_customer_schema_ready($pdo)) {
+        api_error(503, 'CUSTOMER_ACCOUNT_MIGRATION_REQUIRED', 'Customer account features are not configured.');
+    }
+    $customerId = $_SESSION['customer_id'] ?? null;
+    if (!is_int($customerId)) {
+        api_error(401, 'CUSTOMER_AUTHENTICATION_REQUIRED', 'Customer sign-in is required.');
+    }
+    if (isset($_SESSION['customer_last_activity'])
+        && time() - (int) $_SESSION['customer_last_activity'] > 1800) {
+        unset($_SESSION['customer_id'], $_SESSION['customer_last_activity']);
+        session_regenerate_id(true);
+        api_error(401, 'CUSTOMER_SESSION_EXPIRED', 'Sign in again to continue.');
+    }
+    $query = $pdo->prepare(
+        "SELECT id,emri,email FROM me_klientet WHERE id=? AND statusi='Aktiv' LIMIT 1"
+    );
+    $query->execute([$customerId]);
+    $customer = $query->fetch();
+    if (!$customer) {
+        unset($_SESSION['customer_id'], $_SESSION['customer_last_activity']);
+        api_error(401, 'CUSTOMER_AUTHENTICATION_REQUIRED', 'The customer account is unavailable.');
+    }
+    $_SESSION['customer_last_activity'] = time();
+    return $customer;
+}
+
 function api_order_access(array $order, array $user): void
 {
     if ($user['rooli'] === 'kurier' && (int) ($order['kurier_id'] ?? 0) !== (int) $user['id']) {
@@ -156,6 +202,251 @@ $ip = substr((string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 0, 45);
 try {
     if ($method === 'GET' && $path === '/auth/csrf') {
         api_response(200, ['success' => true, 'csrf_token' => csrf_token()]);
+    }
+
+    if ($method === 'POST' && $path === '/customers/register') {
+        api_csrf();
+        if (!api_customer_schema_ready($pdo)) {
+            api_error(503, 'CUSTOMER_ACCOUNT_MIGRATION_REQUIRED', 'Customer account features are not configured.');
+        }
+        $input = api_input();
+        $name = trim(api_string_field($input, 'name'));
+        $email = strtolower(trim(api_string_field($input, 'email')));
+        $password = api_string_field($input, 'password');
+        if ($name === '' || mb_strlen($name, 'UTF-8') > 100
+            || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100
+            || strlen($password) < 12 || strlen($password) > 72) {
+            api_error(422, 'VALIDATION_ERROR', 'A valid name, email, and 12–72 byte password are required.');
+        }
+        $consentFields = [
+            'new_products' => 'njoftime_produkte_te_reja',
+            'discounts' => 'njoftime_zbritje',
+            'offers' => 'njoftime_oferta',
+        ];
+        $consentValues = [];
+        foreach ($consentFields as $field => $column) {
+            $value = $input[$field] ?? false;
+            if (!is_bool($value)) {
+                api_error(422, 'VALIDATION_ERROR', "{$field} must be a boolean.");
+            }
+            $consentValues[$column] = $value ? 1 : 0;
+        }
+        try {
+            $pdo->beginTransaction();
+            $pdo->prepare(
+                'INSERT INTO me_klientet (emri,email,fjalekalimi_hash) VALUES (?,?,?)'
+            )->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT)]);
+            $customerId = (int) $pdo->lastInsertId();
+            $consented = in_array(1, $consentValues, true);
+            $pdo->prepare(
+                'INSERT INTO me_klient_preferencat
+                 (klient_id,njoftime_produkte_te_reja,njoftime_zbritje,njoftime_oferta,pelqim_dhen_me)
+                 VALUES (?,?,?,?,?)'
+            )->execute([
+                $customerId,
+                $consentValues['njoftime_produkte_te_reja'],
+                $consentValues['njoftime_zbritje'],
+                $consentValues['njoftime_oferta'],
+                $consented ? date('Y-m-d H:i:s') : null,
+            ]);
+            $pdo->commit();
+            unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['name'], $_SESSION['role'],
+                $_SESSION['last_activity'], $_SESSION['pending_auth_user_id'], $_SESSION['pending_attempt_id']);
+            session_regenerate_id(true);
+            $_SESSION['customer_id'] = $customerId;
+            $_SESSION['customer_last_activity'] = time();
+            api_response(201, ['success' => true, 'data' => ['id' => $customerId, 'name' => $name, 'email' => $email]]);
+        } catch (PDOException $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if (($exception->errorInfo[0] ?? null) === '23000') {
+                api_error(409, 'EMAIL_ALREADY_REGISTERED', 'An account already exists for this email.');
+            }
+            throw $exception;
+        }
+    }
+
+    if ($method === 'POST' && $path === '/customers/login') {
+        api_csrf();
+        if (!api_customer_schema_ready($pdo)) {
+            api_error(503, 'CUSTOMER_ACCOUNT_MIGRATION_REQUIRED', 'Customer account features are not configured.');
+        }
+        $input = api_input();
+        $email = strtolower(trim(api_string_field($input, 'email')));
+        $password = api_string_field($input, 'password');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100 || $password === '') {
+            api_error(422, 'VALIDATION_ERROR', 'A valid email and password are required.');
+        }
+        $attemptQuery = $pdo->prepare(
+            'SELECT COUNT(*) FROM me_klient_login_tentativa WHERE sukses=0
+             AND koha>=DATE_SUB(NOW(),INTERVAL 15 MINUTE) AND (email=? OR ip=?)'
+        );
+        $attemptQuery->execute([$email, $ip]);
+        if ((int) $attemptQuery->fetchColumn() >= 5) {
+            api_error(429, 'LOGIN_RATE_LIMITED', 'Too many sign-in attempts. Try again later.');
+        }
+        $query = $pdo->prepare(
+            "SELECT id,emri,email,fjalekalimi_hash FROM me_klientet WHERE email=? AND statusi='Aktiv' LIMIT 1"
+        );
+        $query->execute([$email]);
+        $customer = $query->fetch();
+        if (!$customer || strlen($password) > 72 || !password_verify($password, $customer['fjalekalimi_hash'])) {
+            $pdo->prepare(
+                'INSERT INTO me_klient_login_tentativa (email,ip,sukses) VALUES (?,?,0)'
+            )->execute([$email, $ip]);
+            api_error(401, 'INVALID_CUSTOMER_CREDENTIALS', 'Email or password is incorrect.');
+        }
+        $pdo->prepare(
+            'INSERT INTO me_klient_login_tentativa (email,ip,sukses) VALUES (?,?,1)'
+        )->execute([$email, $ip]);
+        unset($_SESSION['user_id'], $_SESSION['username'], $_SESSION['name'], $_SESSION['role'],
+            $_SESSION['last_activity'], $_SESSION['pending_auth_user_id'], $_SESSION['pending_attempt_id']);
+        session_regenerate_id(true);
+        $_SESSION['customer_id'] = (int) $customer['id'];
+        $_SESSION['customer_last_activity'] = time();
+        api_response(200, [
+            'success' => true,
+            'data' => ['id' => (int) $customer['id'], 'name' => $customer['emri'], 'email' => $customer['email']],
+        ]);
+    }
+
+    if ($method === 'POST' && $path === '/customers/logout') {
+        api_csrf();
+        api_customer($pdo);
+        unset($_SESSION['customer_id'], $_SESSION['customer_last_activity']);
+        session_regenerate_id(true);
+        api_response(200, ['success' => true, 'message' => 'Signed out.']);
+    }
+
+    if ($method === 'GET' && $path === '/customers/me') {
+        $customer = api_customer($pdo);
+        $query = $pdo->prepare(
+            'SELECT njoftime_produkte_te_reja,njoftime_zbritje,njoftime_oferta,pelqim_dhen_me
+             FROM me_klient_preferencat WHERE klient_id=?'
+        );
+        $query->execute([$customer['id']]);
+        $preferences = $query->fetch() ?: [];
+        api_response(200, [
+            'success' => true,
+            'data' => [
+                'id' => (int) $customer['id'],
+                'name' => $customer['emri'],
+                'email' => $customer['email'],
+                'notifications' => [
+                    'new_products' => (bool) ($preferences['njoftime_produkte_te_reja'] ?? false),
+                    'discounts' => (bool) ($preferences['njoftime_zbritje'] ?? false),
+                    'offers' => (bool) ($preferences['njoftime_oferta'] ?? false),
+                    'consented_at' => $preferences['pelqim_dhen_me'] ?? null,
+                ],
+            ],
+        ]);
+    }
+
+    if ($method === 'GET' && $path === '/customers/orders') {
+        $customer = api_customer($pdo);
+        $query = $pdo->prepare(
+            'SELECT id,kodi_gjurmimit,statusi,klienti,totali,data_porosise,data_dorezimit
+             FROM me_porosite_online WHERE klient_id=? ORDER BY data_porosise DESC LIMIT 100'
+        );
+        $query->execute([$customer['id']]);
+        $orders = array_map(static fn(array $order): array => [
+            'id' => (int) $order['id'],
+            'tracking_code' => $order['kodi_gjurmimit'],
+            'status' => $order['statusi'],
+            'customer' => $order['klienti'],
+            'total' => (float) $order['totali'],
+            'created_at' => $order['data_porosise'],
+            'delivered_at' => $order['data_dorezimit'],
+        ], $query->fetchAll());
+        api_response(200, ['success' => true, 'data' => $orders]);
+    }
+
+    if ($method === 'GET' && $path === '/customers/favorites') {
+        $customer = api_customer($pdo);
+        $query = $pdo->prepare(
+            "SELECT p.id,p.slug,p.emri,p.cmimi,ps.stoku_aktual
+             FROM me_klient_favorites f
+             JOIN me_produktet p ON p.id=f.produkt_id AND p.aktiv=1 AND p.i_dukshem_ne_web=1
+             JOIN me_produktet_stoku ps ON ps.id=p.id
+             WHERE f.klient_id=? ORDER BY f.data_krijimit DESC"
+        );
+        $query->execute([$customer['id']]);
+        $favorites = array_map(static fn(array $product): array => [
+            'id' => (int) $product['id'],
+            'slug' => $product['slug'],
+            'name' => $product['emri'],
+            'price' => (float) $product['cmimi'],
+            'stock' => (int) $product['stoku_aktual'],
+        ], $query->fetchAll());
+        api_response(200, ['success' => true, 'data' => $favorites]);
+    }
+
+    if ($method === 'POST' && $path === '/customers/favorites') {
+        api_csrf();
+        $customer = api_customer($pdo);
+        $input = api_input();
+        $productId = filter_var($input['product_id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$productId || $productId < 1) {
+            api_error(422, 'VALIDATION_ERROR', 'product_id must be a positive integer.');
+        }
+        $productQuery = $pdo->prepare(
+            'SELECT id FROM me_produktet WHERE id=? AND aktiv=1 AND i_dukshem_ne_web=1'
+        );
+        $productQuery->execute([$productId]);
+        if (!$productQuery->fetchColumn()) {
+            api_error(404, 'PRODUCT_NOT_FOUND', 'Product does not exist.');
+        }
+        $pdo->prepare(
+            'INSERT IGNORE INTO me_klient_favorites (klient_id,produkt_id) VALUES (?,?)'
+        )->execute([$customer['id'], $productId]);
+        api_response(201, ['success' => true, 'message' => 'Product saved to favorites.']);
+    }
+
+    if ($method === 'DELETE' && preg_match('~^/customers/favorites/([1-9]\d*)$~D', $path, $match)) {
+        api_csrf();
+        $customer = api_customer($pdo);
+        $delete = $pdo->prepare('DELETE FROM me_klient_favorites WHERE klient_id=? AND produkt_id=?');
+        $delete->execute([$customer['id'], (int) $match[1]]);
+        if ($delete->rowCount() === 0) {
+            api_error(404, 'FAVORITE_NOT_FOUND', 'Favorite product does not exist.');
+        }
+        api_response(200, ['success' => true, 'message' => 'Product removed from favorites.']);
+    }
+
+    if ($method === 'PUT' && $path === '/customers/preferences') {
+        api_csrf();
+        $customer = api_customer($pdo);
+        $input = api_input();
+        $fields = [
+            'new_products' => 'njoftime_produkte_te_reja',
+            'discounts' => 'njoftime_zbritje',
+            'offers' => 'njoftime_oferta',
+        ];
+        $values = [];
+        foreach ($fields as $field => $column) {
+            if (!array_key_exists($field, $input) || !is_bool($input[$field])) {
+                api_error(422, 'VALIDATION_ERROR', "{$field} must be a boolean.");
+            }
+            $values[$column] = $input[$field] ? 1 : 0;
+        }
+        $consented = in_array(1, $values, true);
+        $pdo->prepare(
+            'INSERT INTO me_klient_preferencat
+             (klient_id,njoftime_produkte_te_reja,njoftime_zbritje,njoftime_oferta,pelqim_dhen_me)
+             VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE
+             njoftime_produkte_te_reja=VALUES(njoftime_produkte_te_reja),
+             njoftime_zbritje=VALUES(njoftime_zbritje),
+             njoftime_oferta=VALUES(njoftime_oferta),
+             pelqim_dhen_me=VALUES(pelqim_dhen_me)'
+        )->execute([
+            $customer['id'],
+            $values['njoftime_produkte_te_reja'],
+            $values['njoftime_zbritje'],
+            $values['njoftime_oferta'],
+            $consented ? date('Y-m-d H:i:s') : null,
+        ]);
+        api_response(200, ['success' => true, 'message' => 'Notification preferences updated.']);
     }
 
     if ($method === 'POST' && $path === '/auth/login') {
@@ -279,6 +570,7 @@ try {
         $pdo->prepare(
             'INSERT INTO me_audit_log (perdorues_id, perdoruesi, veprimi, ip) VALUES (?, ?, ?, ?)'
         )->execute([$user['id'], substr($user['username'], 0, 50), 'Hyrje e suksesshme përmes REST API', $ip]);
+        unset($_SESSION['customer_id'], $_SESSION['customer_last_activity']);
         session_regenerate_id(true);
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['username'] = $user['username'];
@@ -639,7 +931,7 @@ try {
     }
 
     if ($method === 'OPTIONS') {
-        header('Allow: GET, POST, PATCH, DELETE, OPTIONS');
+        header('Allow: GET, POST, PUT, PATCH, DELETE, OPTIONS');
         api_response(204);
     }
     api_error(404, 'ENDPOINT_NOT_FOUND', 'API endpoint does not exist.');

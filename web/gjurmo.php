@@ -28,16 +28,20 @@ if ($trackingCode !== '' && preg_match('/^[A-Z0-9]{1,20}$/D', $trackingCode)) {
 
 web_header('Gjurmimi i porosisë');
 ?>
-<p class="eyebrow">Informohu në çdo hap</p><h1 class="page-title">Gjurmimi i porosisë</h1>
-<section class="glass-card">
+<?php if (($_GET['created'] ?? '') === '1' && $order): ?>
+    <section class="order-confirmed" role="status"><i class="bi bi-check-circle" aria-hidden="true"></i><div><p class="eyebrow">Porosia u regjistrua</p><h1>Faleminderit për porosinë!</h1><p>Mbaje kodin e gjurmimit që të mund ta kontrollosh statusin e porosisë kur të duash.</p></div></section>
+<?php else: ?>
+    <section class="page-intro"><p class="eyebrow">Përcille porosinë tënde</p><h1 class="page-title">Ku është porosia?</h1><p>Shkruaj kodin e gjurmimit që more pas porosisë për të parë statusin, artikujt dhe përditësimet e dërgesës.</p></section>
+<?php endif; ?>
+<section class="content-card">
     <form method="get" class="form-grid">
-        <div class="field"><label for="tracking">Kodi i gjurmimit</label><input id="tracking" name="kodi_gjurmimit" maxlength="20" value="<?= e($trackingCode) ?>" placeholder="p.sh. HB0123456789" required></div>
-        <button class="btn" type="submit">Gjurmo porosinë</button>
+        <div class="field"><label for="tracking">Kodi i porosisë</label><input id="tracking" name="kodi_gjurmimit" maxlength="20" value="<?= e($trackingCode) ?>" placeholder="Shkruaj kodin e gjurmimit" required></div>
+        <button class="btn" type="submit">Shfaq statusin</button>
     </form>
 </section>
-<?php if ($trackingCode !== '' && !$order): ?><div class="alert error" role="alert">Nuk u gjet porosi me këtë kod.</div><?php endif; ?>
+<?php if ($trackingCode !== '' && !$order): ?><div class="alert error" role="alert">Nuk gjetëm porosi me këtë kod. Kontrollo shkronjat dhe numrat, pastaj provo sërish.</div><?php endif; ?>
 <?php if ($order): ?>
-    <section class="glass-card">
+    <section class="content-card">
         <div class="section-heading"><div><p class="eyebrow">Kodi i porosisë</p><span class="tracking-code"><?= e($order['kodi_gjurmimit']) ?></span></div>
             <span class="badge <?= $order['statusi'] === 'Dorëzuar' ? 'green' : ($order['statusi'] === 'Anuluar' ? 'red' : '') ?>"><?= e($order['statusi']) ?></span></div>
         <p>Porositur më <?= e($order['data_porosise']) ?><?php if ($order['data_dorezimit']): ?> · Dorëzuar më <?= e($order['data_dorezimit']) ?><?php endif; ?></p>
@@ -46,7 +50,7 @@ web_header('Gjurmimi i porosisë');
             <?php foreach ($items as $item): ?><tr><td><?= e($item['emri_produktit']) ?></td><td><?= e($item['sasia']) ?></td><td><?= e(number_format((float) $item['cmimi'] * (int) $item['sasia'], 2)) ?> €</td></tr><?php endforeach; ?>
         </tbody></table></div>
         <p>Nëntotali <?= e(number_format((float) $order['totali'] - (float) $order['tarifa_dorezimit'], 2)) ?> € · Dërgesa <?= e(number_format((float) $order['tarifa_dorezimit'], 2)) ?> € · <strong>Totali <?= e(number_format((float) $order['totali'], 2)) ?> €</strong></p>
-        <h2>Historiku i statusit</h2><ol><?php foreach ($history as $event): ?><li><strong><?= e($event['statusi']) ?></strong> · <?= e($event['koha']) ?><?php if ($event['shenim']): ?> — <?= e($event['shenim']) ?><?php endif; ?></li><?php endforeach; ?></ol>
+        <h2>Përditësimet e porosisë</h2><ol><?php foreach ($history as $event): ?><li><strong><?= e($event['statusi']) ?></strong> · <?= e($event['koha']) ?><?php if ($event['shenim']): ?> — <?= e($event['shenim']) ?><?php endif; ?></li><?php endforeach; ?></ol>
     </section>
 <?php endif; ?>
 <?php web_footer(); ?>

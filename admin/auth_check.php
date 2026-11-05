@@ -43,6 +43,7 @@ $pagePermissions = [
     'mesazhet.php' => ['admin', 'farmacist'],
     'perdoruesit.php' => ['admin'],
     'cilesimet.php' => ['admin', 'farmacist', 'kurier'],
+    'ofertat.php' => ['admin'],
 ];
 $requestedPage = basename($_SERVER['SCRIPT_NAME'] ?? '');
 $allowedRoles = $pagePermissions[$requestedPage] ?? [];
