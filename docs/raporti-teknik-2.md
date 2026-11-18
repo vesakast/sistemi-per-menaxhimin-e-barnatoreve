@@ -29,7 +29,7 @@ Në mungesë stoku ose gabim gjatë ruajtjes, transaksioni anulohet. Anulimi kë
 
 ### Entitetet dhe kufizimet kryesore
 
-Skema aktuale përfshin tabelat bazë të stafit, produkteve, stokut dhe porosive (`me_audit_log`, `me_cilesimet`, `me_kategorite`, `me_login_tentativa`, `me_mesazhet`, `me_njoftimet`, `me_njoftimet_lexuara`, `me_otp_kodet`, `me_perdoruesit`, `me_porosi_items`, `me_porosi_statuset`, `me_porosite_online`, `me_produktet`, `me_stoku_batch`, `me_stoku_levizjet`), si dhe tabelat e llogarive/ofertave (`me_klientet`, `me_klient_favorites`, `me_klient_preferencat`, `me_klient_login_tentativa`, `me_ofertat`, `me_oferta_items`) dhe pamjen `me_produktet_stoku`. `me_porosite_online` ka edhe kolonën opsionale `klient_id`, që lidh porosinë me llogarinë e klientit.
+Skema aktuale përfshin tabelat bazë të stafit, produkteve, stokut dhe porosive (`me_audit_log`, `me_cilesimet`, `me_kategorite`, `me_login_tentativa`, `me_mesazhet`, `me_njoftimet`, `me_njoftimet_lexuara`, `me_otp_kodet`, `me_perdoruesit`, `me_porosi_items`, `me_porosi_statuset`, `me_porosite_online`, `me_produktet`, `me_stoku_batch`, `me_stoku_levizjet`), tabelat e llogarive/ofertave (`me_klientet`, `me_klient_favorites`, `me_klient_preferencat`, `me_klient_login_tentativa`, `me_ofertat`, `me_oferta_items`), tabelën `me_web_design` dhe pamjen `me_produktet_stoku`. `me_porosite_online` ka edhe kolonën opsionale `klient_id`, që lidh porosinë me llogarinë e klientit.
 
 Lidhjet kryesore të deklaruara janë:
 
@@ -45,6 +45,8 @@ Lidhjet kryesore të deklaruara janë:
 Skema vendos unikësi për `sku`, `slug`, `username`, `kodi_gjurmimit` dhe çiftin produkt/batch. Ka gjithashtu kufizime për çmim jo-negativ dhe sasi pozitive në artikujt e porosisë. `me_produktet_stoku` llogarit `stoku_aktual`, `skadenca_me_e_afert` dhe `statusi_stokut` nga batch-et që nuk kanë skaduar.
 
 > `database/schema.sql` është DDL për instalim të ri: përmban tabelat dhe pamjen, përfshirë kolonën e imazhit për produktet dhe ofertat, por jo rreshta me produkte, porosi, llogari apo kredenciale. Nuk krijon llogari fillestare apo konfigurimin e dyqanit. Për databazat ekzistuese, migrimi `001_customers_and_offers.sql` shton veçoritë e klientëve/ofertave dhe `klient_id` te porositë; migrimi `002_offer_images.sql` shton `me_ofertat.imazhi` kur mungon. Në instalimet ku të dy migrimet janë aplikuar, nuk duhen ekzekutuar përsëri. Skriptet te `database/seeds/` janë të dhëna fillestare për sete dhe varen nga produktet përkatëse në katalog.
+
+Tabela `me_web_design` ruan një konfigurim JSON për draftin dhe një për dizajnin e publikuar, bashkë me përdoruesit dhe kohët e fundit të ruajtjes/publikimit. Për instalimet ekzistuese, `003_visual_design_studio.sql` e krijon këtë tabelë pas migrimeve të nevojshme të mëparshme; ekzekutoje vetëm nëse mungon.
 
 ## 2. Backend-i dhe API REST
 

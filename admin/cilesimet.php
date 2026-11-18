@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/auth_check.php';
+require_once dirname(__DIR__) . '/web/_design.php';
 
 $error = '';
 $mustChangePassword = (int) $authenticatedUser['duhet_ndryshim_fjalekalimi'] === 1;
@@ -49,6 +50,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log($pdo, 'Përditësoi profilin personal');
             flash_message('Profili personal u përditësua.');
             redirect('/admin/cilesimet.php');
+        }
+
+        if (in_array($action, ['save_design_draft', 'publish_design'], true)) {
+            if ($current_role !== 'admin') {
+                http_response_code(403);
+                throw new DomainException('Vetëm administratori kryesor mund të ndryshojë dizajnin.');
+            }
+            if (!hb_design_is_ready($pdo)) {
+                throw new DomainException('Ekzekutoni fillimisht migrimin 003_visual_design_studio.sql.');
+            }
+            $design = hb_design_validate($_POST['design'] ?? []);
+            $designJson = json_encode($design, JSON_THROW_ON_ERROR);
+            if ($action === 'publish_design') {
+                $statement = $pdo->prepare(
+                    'INSERT INTO me_web_design (id,draft_json,published_json,updated_by,published_by,updated_at,published_at)
+                     VALUES (1,?,?,?,?,NOW(),NOW())
+                     ON DUPLICATE KEY UPDATE draft_json=VALUES(draft_json),published_json=VALUES(published_json),
+                     updated_by=VALUES(updated_by),published_by=VALUES(published_by),
+                     updated_at=NOW(),published_at=NOW()'
+                );
+                $statement->execute([$designJson, $designJson, $current_user_id, $current_user_id]);
+                audit_log($pdo, 'Publikoi dizajnin e dyqanit');
+                flash_message('Dizajni u publikua me sukses.');
+            } else {
+                $statement = $pdo->prepare(
+                    'INSERT INTO me_web_design (id,draft_json,updated_by,updated_at)
+                     VALUES (1,?,?,NOW())
+                     ON DUPLICATE KEY UPDATE draft_json=VALUES(draft_json),updated_by=VALUES(updated_by),updated_at=NOW()'
+                );
+                $statement->execute([$designJson, $current_user_id]);
+                audit_log($pdo, 'Ruajti draftin e dizajnit të dyqanit');
+                flash_message('Drafti i dizajnit u ruajt. Vizitorët vazhdojnë të shohin dizajnin e publikuar.');
+            }
+            redirect('/admin/cilesimet.php#visual-design-studio');
         }
 
         if ($action !== 'save_settings' || $current_role !== 'admin') {
@@ -162,6 +197,9 @@ render_flash();
             <?php endif; ?>
         </section>
     <?php endif; ?>
+    <?php if ($current_role === 'admin'): ?>
+        <?php require __DIR__ . '/_visual_design_studio.php'; ?>
+    <?php endif; ?>
 <?php endif; ?>
 <?php if ($logs !== []): ?>
     <section class="panel"><h2>Auditimi i fundit</h2><div class="table-wrap"><table><thead><tr><th>Përdoruesi</th><th>Veprimi</th><th>Koha</th></tr></thead><tbody>
@@ -178,4 +216,7 @@ render_flash();
         <button class="btn" type="submit">Ndrysho fjalëkalimin</button>
     </form>
 </section>
+<?php if (!$mustChangePassword && $current_role === 'admin'): ?>
+    <script src="<?= e(app_url('/admin/visual-design-studio.js')) ?>" defer></script>
+<?php endif; ?>
 <?php admin_footer(); ?>

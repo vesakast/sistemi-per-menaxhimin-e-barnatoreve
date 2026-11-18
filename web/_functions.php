@@ -4,6 +4,11 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/db.php';
 require_once dirname(__DIR__) . '/admin/_functions.php';
 require_once dirname(__DIR__) . '/admin/_inventory.php';
+require_once __DIR__ . '/_design.php';
+
+if (($_GET['visual_preview'] ?? '') === '1' && ($_SESSION['role'] ?? '') === 'admin') {
+    header('X-Frame-Options: SAMEORIGIN');
+}
 
 function current_cart(): array
 {
@@ -363,6 +368,10 @@ function web_header(string $title): void
 {
     $count = cart_item_count();
     $customer = current_customer($GLOBALS['pdo']);
+    $design = hb_design_public($GLOBALS['pdo']);
+    $designPreview = isset($_GET['visual_preview'])
+        && $_GET['visual_preview'] === '1'
+        && ($_SESSION['role'] ?? '') === 'admin';
     $categories = $GLOBALS['pdo']->query(
         "SELECT emri, slug FROM me_kategorite WHERE statusi='Aktiv' ORDER BY emri"
     )->fetchAll();
@@ -378,13 +387,14 @@ function web_header(string $title): void
         <link rel="icon" type="image/svg+xml" href="<?= e(app_url('/web-images/herbabloom-favicon.svg')) ?>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Allura&family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=Great+Vibes&family=Lora:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
         <link rel="stylesheet" href="<?= e(app_url('/web/style.css?v=' . filemtime(__DIR__ . '/style.css'))) ?>">
+        <style id="herbabloom-design-settings"><?= hb_design_css($design) ?></style>
     </head>
     <?php $bodyClass = basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) === 'shporta.php' ? ' class="cart-page"' : ''; ?>
-    <body<?= $bodyClass ?>>
+    <body<?= $bodyClass ?><?= $designPreview ? ' data-visual-design-preview="authorized"' : '' ?>>
 <div class="announcement-bar" aria-label="Njoftim i dyqanit">
     <div class="announcement-track">
         <span>Përzgjedhje bimore dhe kujdes personal <span aria-hidden="true">·</span> Pagesë në dorëzim</span>
@@ -475,7 +485,7 @@ function web_footer(): void
     </footer>
     <div class="store-toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="<?= e(app_url('/web/store.js')) ?>" defer></script>
+    <script src="<?= e(app_url('/web/store.js?v=' . filemtime(__DIR__ . '/store.js'))) ?>" defer></script>
     </body>
     </html>
     <?php

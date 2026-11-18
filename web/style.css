@@ -48,7 +48,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 @keyframes announcement-scroll {
     from {
-        transform: translateX(-33.333%);
+        transform: translateX(var(--announcement-offset, -33.333%));
     }
 
     to {
@@ -120,8 +120,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .btn-forest.btn-lg { padding: 12px 21px; font-size: 13px; }
 .hero-visual { position: relative; min-height: 490px; overflow: hidden; background: #d7ddcb; }
 .hero-visual img,.hero-visual video { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
-.hero-visual video.hero-video-slide-1,.hero-visual video.hero-video-slide-2,.hero-visual video.hero-video-slide-3 { transform: scale(1.8); }
-.hero-visual video.hero-video-slide-3 { transform: scale(2); }
+.hero-visual video.hero-video-slide-1,.hero-visual video.hero-video-slide-2,.hero-visual video.hero-video-slide-3 { transform: scale(2.25); }
 .hero-visual.has-placeholder { background: linear-gradient(140deg,#dce1d2,#c7d0bc 48%,#e8e3d3); }
 .hero-visual-caption { position: absolute; right: 20px; bottom: 17px; padding: 6px 11px; border-radius: 3px; background: #fffefaeb; color: var(--forest); font-size: 10px; letter-spacing: .06em; }
 .hero-controls { position: absolute; z-index: 2; left: clamp(32px,7vw,100px); bottom: 24px; display: flex; align-items: center; gap: 15px; }
@@ -353,7 +352,7 @@ th { color: var(--forest); background: #f4f4ed; white-space: nowrap; }
     .hero-copy h1 { max-width: 450px; font-size: clamp(39px,12vw,58px); }
     .hero-copy > p:not(.eyebrow) { font-size: 13px; }
     .hero-visual { min-height: 250px; }
-    .hero-visual video.hero-video-slide-1,.hero-visual video.hero-video-slide-2,.hero-visual video.hero-video-slide-3 { transform: scale(2.5); }
+    .hero-visual video.hero-video-slide-1,.hero-visual video.hero-video-slide-2,.hero-visual video.hero-video-slide-3 { transform: scale(2.7); }
     .hero-controls { left: 25px; bottom: 12px; }
     .hero-visual-caption { right: 12px; bottom: 10px; }
     .benefit-strip { grid-template-columns: 1fr; gap: 16px; margin: 20px 0 55px; padding: 18px 22px; }
@@ -618,7 +617,7 @@ body {
     overflow: hidden;
     border: 1px solid rgba(255,255,255,.50);
     border-radius: 20px;
-    background: linear-gradient(105deg, rgba(39,62,43,.91), rgba(75,101,67,.84));
+    background: linear-gradient(105deg, var(--design-benefit-bg, rgba(39,62,43,.91)), var(--design-benefit-accent, rgba(75,101,67,.84)));
     box-shadow: 0 14px 34px rgba(28,45,31,.18), inset 0 1px 0 rgba(255,255,255,.22);
 }
 .section-heading { padding: 17px 22px; }

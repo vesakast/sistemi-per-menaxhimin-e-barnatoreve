@@ -32,7 +32,7 @@ function admin_header(string $title): void
     echo '<link rel="icon" type="image/svg+xml" href="' . e(app_url('/web-images/herbabloom-favicon.svg')) . '">';
     echo '<link rel="preconnect" href="https://fonts.googleapis.com">';
     echo '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">';
-    echo '<link rel="stylesheet" href="' . e(app_url('/admin/style.css')) . '"></head><body>';
+    echo '<link rel="stylesheet" href="' . e(app_url('/admin/style.css?v=2')) . '"></head><body>';
     echo '<div class="app-shell">';
     require __DIR__ . '/sidebar.php';
     echo '<main class="main-content"><header class="page-heading"><div><p class="eyebrow">HerbaBloom · Paneli i kontrollit</p>';

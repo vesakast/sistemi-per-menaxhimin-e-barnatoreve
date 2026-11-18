@@ -9,7 +9,6 @@ HerbaBloom është aplikacion PHP për administrimin e një barnatoreje bimore d
 - [Raporti Teknik 1 – Analiza, kërkesat dhe dizajni teknik](docs/raporti-teknik-1.md)
 - [Raporti Teknik 2 – Databaza, backend-i dhe API](docs/raporti-teknik-2.md)
 - [Raporti Teknik 3 – Frontend-i, integrimi dhe progresi funksional](docs/raporti-teknik-3.md)
-- [Raporti Teknik 4 – Testimi, siguria, deployment dhe versioni beta](docs/raporti-teknik-4.md)
 
 Këto dokumente përmbledhin projektin dhe mund të shërbejnë si bazë për prezantimet. Funksionet e panelit dhe të dyqanit i kam testuar manualisht. Demonstrimi live me profesorin është planifikuar të bëhet gjatë prezantimit; ende nuk është zhvilluar. Provat me pamje ekrani do të përgatiten dhe dorëzohen në dokument Word. Projekti paraqitet në GitHub si detyrë; nuk kërkohet hosting publik ose URL me domain.
 
@@ -21,6 +20,7 @@ Këto dokumente përmbledhin projektin dhe mund të shërbejnë si bazë për pr
 - Kyçje e stafit me fjalëkalim dhe verifikim OTP me email.
 - Menaxhimi i mesazheve të klientëve, cilësimeve të dyqanit dhe raporteve financiare sipas lejeve.
 - Dyqan responsive me ridizajn të storefront-it, kategori, kërkim live, bestseller-a, shportë, oferta dhe gjurmim porosie.
+- Visual Design Studio në panelin e administratorit: ruajtje drafti, publikim të veçantë dhe parapamje live për ballinën, katalogun dhe detajet e produktit.
 - Llogari të ndara për klientët, të preferuarat, preferencat me pëlqim dhe sete/oferta të konfiguruara përmes migrimit opsional.
 - Administrimi i imazheve të produkteve dhe ofertave me URL; imazhet/video lokale ruhen në `web-images/`.
 - API REST për autentikim, produkte, porosi, gjurmim dhe llogari klientësh.
@@ -48,10 +48,13 @@ Pra, **PHP nuk e krijon vetë databazën dhe API-ja nuk është tabelë databaze
 - PHP 8.1 ose më i ri (i verifikuar me PHP 8.3), me PDO MySQL dhe OpenSSL
 - MySQL 8
 - HTML, CSS dhe JavaScript
+- Node.js dhe npm për kontrollimin sintaksor të JavaScript-it gjatë zhvillimit (nuk kërkohen për ekzekutimin e dyqanit)
 - Laragon për zhvillim lokal
 - PHPMailer për dërgimin e kodeve OTP
 
 PHP/PDO përshtatet me ambientin Laragon dhe lejon përdorimin e query-ve të përgatitura; MySQL ruan të dhënat relacionale; HTML/CSS/JavaScript implementojnë ndërfaqen pa framework të rëndë.
+
+Për të kontrolluar sintaksën e skedarëve JavaScript pas ndryshimeve, ekzekuto `npm run check:js` nga dosja kryesore e projektit. Ky kontroll përdor Node.js pa instaluar paketa shtesë; Node.js nuk zëvendëson PHP-në dhe nuk kërkohet për ta hapur aplikacionin.
 
 ## Struktura e projektit
 
@@ -59,12 +62,13 @@ PHP/PDO përshtatet me ambientin Laragon dhe lejon përdorimin e query-ve të p�
 herbabloom/
 ├── admin/       Paneli i stafit, RBAC, inventari dhe porositë
 ├── api/         Rutimi i API-së REST dhe konfigurimi Apache
-├── database/    Skema SQL, migrimet për databazat ekzistuese dhe seed-et e seteve
-├── docs/        Dokumentet për Raportet Teknike 1–4
+├── database/    Skema SQL, migrimet për databazat ekzistuese dhe seed-et
+├── docs/        Dokumentet për Raportet Teknike 1–3
 ├── web/         Dyqani publik dhe rrjedhat e klientit
 ├── web-images/  Imazhet dhe videot e përdorura nga dyqani
 ├── IMAGE_ASSETS.md  Manifesti dhe prejardhja e aseteve vizuale
 ├── db.php       Lidhja PDO, sesioni dhe ndihmësit e sigurisë
+├── package.json Skriptet npm për kontrollimin e JavaScript-it
 ├── composer.json
 └── composer.lock
 ```
@@ -74,7 +78,7 @@ herbabloom/
 1. Klono repository-n në dosjen e web-it të Laragon-it dhe ndiz Apache/MySQL.
 2. Krijo databazën `herbabloom_db` dhe importo `database/schema.sql` përmes HeidiSQL ose klientit MySQL. Skema krijon tabelat dhe pamjen; nuk fshin objekte ekzistuese dhe nuk fut porosi, produkte ose klientë. **Përdor databazë të re/bosh; mos importo mbi databazë me të dhëna që dëshiron t’i ruash.**
 3. Importo ose krijo produktet reale në katalog, pastaj ekzekuto sipas radhës `database/seeds/001_herbabloom_bundles.sql` dhe `database/seeds/002_herbabloom_bundles.sql`. Skriptet krijojnë gjithsej gjashtë sete nga slugs ekzistues dhe llogarisin çmimet si shuma e çmimeve aktuale të përbërësve; nuk sajojnë ulje.
-4. Për një databazë ekzistuese të krijuar para llogarive/ofertave, bëj backup dhe kontrollo gjendjen e skemës para migrimit. Nëse mungojnë tabelat e klientëve/ofertave dhe kolona `klient_id`, ekzekuto një herë `database/migrations/001_customers_and_offers.sql`; pastaj ekzekuto një herë `database/migrations/002_offer_images.sql` për kolonën `me_ofertat.imazhi`. Nëse migrimi 001 është aplikuar më herët, mos e përsërit: mjafton 002 nëse kolona `imazhi` mungon. Nëse të dy migrimet janë aplikuar, mos i ekzekuto përsëri. Seed-et e seteve janë hapa të veçantë dhe duhen kontrolluar kundrejt produkteve ekzistuese para ekzekutimit.
+4. Për një databazë ekzistuese të krijuar para llogarive/ofertave, bëj backup dhe kontrollo gjendjen e skemës para migrimit. Nëse mungojnë tabelat e klientëve/ofertave dhe kolona `klient_id`, ekzekuto një herë `database/migrations/001_customers_and_offers.sql`; pastaj ekzekuto një herë `database/migrations/002_offer_images.sql` për kolonën `me_ofertat.imazhi`. Nëse migrimi 001 është aplikuar më herët, mos e përsërit: mjafton 002 nëse kolona `imazhi` mungon. Për Visual Design Studio, ekzekuto një herë edhe `database/migrations/003_visual_design_studio.sql` pasi migrimet e nevojshme të mëparshme të jenë aplikuar. Nëse migrimet përkatëse janë aplikuar, mos i përsërit. Seed-et e seteve janë hapa të veçantë dhe duhen kontrolluar kundrejt produkteve ekzistuese para ekzekutimit.
 5. Ekzekuto `composer install` për varësitë PHP.
 6. Konfiguro variablat e mjedisit për procesin PHP:
 
@@ -134,4 +138,4 @@ Imazhet dhe videot e instalimit lokal gjenden te `web-images/`; për momentin at
 - Fjalëkalimet hash-ohen; hyrja e stafit kërkon OTP. Të ardhurat dhe shumat në pamjet e stafit/API-në e stafit shfaqen vetëm për administratorin; gjurmimi publik kthen përmbledhjen e porosisë për klientin.
 - `composer.lock` versionohet. Dosja `vendor/` aktualisht është e pranishme edhe në Git; zakonisht mjafton të dorëzohen manifestet Composer dhe varësitë të instalohen me `composer install`.
 - `database/schema.sql` përmban strukturën lokale të tabelave `me_` dhe pamjen e stokut; nuk përmban porositë, katalogun privat, llogari, fjalëkalime apo kredenciale. Setet fillestare krijohen veçmas me skriptin e seed-it pas importimit të katalogut.
-- Commit-et aktuale në GitHub përfshijnë raportet e hershme dhe skemën, por nuk dokumentojnë të gjitha fazat e implementimit që janë ende lokale. Para publikimit, kontrollo ndryshimet lokale dhe historikun e commit-eve; mos e paraqit historikun si regjistrim të plotë të progresit. Raporti 4 përmbledh kriteret e udhëzuesit, provat e deritanishme dhe punët e mbetura; demonstrimi praktik mbetet i domosdoshëm.
+- Commit-et në GitHub nuk duhen paraqitur si regjistrim i plotë i çdo faze të zhvillimit. Dokumentet e publikuara përshkruajnë veçoritë sipas implementimit aktual; demonstrimi praktik mbetet i domosdoshëm.

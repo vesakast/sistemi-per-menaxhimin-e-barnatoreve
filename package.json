@@ -1,0 +1,7 @@
+{
+  "name": "herbabloom",
+  "private": true,
+  "scripts": {
+    "check:js": "node --check admin/admin-motion.js && node --check admin/visual-design-studio.js && node --check web/store.js"
+  }
+}

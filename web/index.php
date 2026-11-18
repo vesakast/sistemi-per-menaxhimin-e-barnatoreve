@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_functions.php';
 
+$design = hb_design_public($pdo);
 $categories = $pdo->query(
     "SELECT id, emri, slug, pershkrimi FROM me_kategorite
      WHERE statusi='Aktiv' ORDER BY emri"
@@ -62,29 +63,57 @@ $slides = [
         'eyebrow' => 'Kujdes i frymëzuar nga natyra',
         'title' => 'Zgjedhje të kujdesshme për rutinën tënde.',
         'text' => 'Eksploro çajra, suplemente, vajra dhe produkte për kujdesin e lëkurës e flokëve.',
-        'image' => 'hero-poster-1.jpg',
+        'image' => 'banner-natural-care.jpg',
         'video' => 'hero-slide-1.mp4',
     ],
     [
         'eyebrow' => 'Gjej atë që të përshtatet',
         'title' => 'Kujdes personal, sipas ritmit tënd.',
         'text' => 'Krahaso përshkrimet dhe përbërjet për të zgjedhur çfarë i përshtatet rutinës sate.',
-        'image' => 'hero-poster-2.jpg',
+        'image' => 'about-herbabloom.jpg',
         'video' => 'hero-slide-2.mp4',
     ],
     [
         'eyebrow' => 'Mirë se vjen në HerbaBloom',
         'title' => 'Zbulo produkte për mirëqenie dhe kujdes.',
         'text' => 'Një katalog online me përzgjedhje bimore, vitamina, suplemente dhe kujdes personal.',
-        'image' => 'hero-poster-3.jpg',
+        'image' => 'background-image.jpg',
         'video' => 'hero-slide-3.mp4',
     ],
 ];
+if ($design['hero']['enabled']) {
+    $slides[0]['eyebrow'] = $design['hero']['eyebrow'];
+    $slides[0]['title'] = $design['hero']['title'];
+    $slides[0]['text'] = $design['hero']['description'];
+    $slides[0]['button_text'] = $design['hero']['button_text'];
+    $slides[0]['button_url'] = $design['hero']['button_url'];
+    if ($design['hero']['background_image'] !== '') {
+        $slides[0]['image'] = basename((string) parse_url($design['hero']['background_image'], PHP_URL_PATH));
+        $slides[0]['configured_image'] = $design['hero']['background_image'];
+    }
+    if ($design['hero']['video_url'] !== '') {
+        $slides[0]['video'] = basename((string) parse_url($design['hero']['video_url'], PHP_URL_PATH));
+        $slides[0]['configured_video'] = $design['hero']['video_url'];
+    } else {
+        $slides[0]['video'] = '';
+    }
+    if ($design['hero']['poster'] !== '') {
+        $slides[0]['image'] = basename((string) parse_url($design['hero']['poster'], PHP_URL_PATH));
+        $slides[0]['configured_image'] = $design['hero']['poster'];
+    }
+}
 foreach ($slides as &$slide) {
     $imagePath = dirname(__DIR__) . '/web-images/' . $slide['image'];
-    $slide['image_url'] = is_file($imagePath) ? app_url('/web-images/' . rawurlencode($slide['image'])) : '';
+    $slide['image_url'] = $slide['configured_image'] ?? (is_file($imagePath)
+        ? app_url('/web-images/' . rawurlencode($slide['image']))
+        : '');
     $videoPath = dirname(__DIR__) . '/web-images/' . $slide['video'];
-    $slide['video_url'] = is_file($videoPath) ? app_url('/web-images/' . rawurlencode($slide['video'])) : '';
+    $slide['video_url'] = $slide['configured_video'] ?? (is_file($videoPath)
+        ? app_url('/web-images/' . rawurlencode($slide['video']))
+        : '');
+    $slide['video_type'] = strtolower(pathinfo($slide['video'], PATHINFO_EXTENSION)) === 'webm'
+        ? 'video/webm'
+        : 'video/mp4';
 }
 unset($slide);
 
@@ -101,19 +130,20 @@ if (customer_schema_ready($pdo)) {
 
 web_header('Ballina');
 ?>
-<section class="hero-slider" aria-roledescription="karusel">
+<section class="hero-slider<?= !$design['hero']['enabled'] ? ' design-hero-hidden' : '' ?>" aria-roledescription="karusel" data-design-hero>
     <?php foreach ($slides as $index => $slide): ?>
         <article class="hero-slide <?= $index === 0 ? 'is-active' : '' ?>" aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>" data-hero-slide>
             <div class="hero-copy">
-                <p class="eyebrow"><?= e($slide['eyebrow']) ?></p>
-                <h1><?= e($slide['title']) ?></h1>
-                <p><?= e($slide['text']) ?></p>
-                <a class="btn btn-forest btn-lg" href="<?= e(app_url('/web/produktet.php')) ?>">Shfleto katalogun <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                <p class="eyebrow" data-design-hero-eyebrow><?= e($slide['eyebrow']) ?></p>
+                <h1 data-design-hero-title><?= e($slide['title']) ?></h1>
+                <p data-design-hero-description><?= e($slide['text']) ?></p>
+                <a class="btn btn-forest btn-lg" href="<?= e($index === 0 ? ($slide['button_url'] ?? app_url('/web/produktet.php')) : app_url('/web/produktet.php')) ?>" data-design-hero-button><?= e($index === 0 ? ($slide['button_text'] ?? 'Shfleto katalogun') : 'Shfleto katalogun') ?> <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
             </div>
             <div class="hero-visual <?= $slide['image_url'] === '' && $slide['video_url'] === '' ? 'has-placeholder' : '' ?>">
                 <?php if ($slide['video_url'] !== ''): ?>
+                    <?php if ($slide['image_url'] !== ''): ?><img class="hero-video-poster" src="<?= e($slide['image_url']) ?>" alt="" aria-hidden="true"><?php endif; ?>
                     <video<?= in_array($slide['video'], ['hero-slide-1.mp4', 'hero-slide-2.mp4', 'hero-slide-3.mp4'], true) ? ' class="hero-video-fill hero-video-slide-' . e((string) ($index + 1)) . '"' : '' ?> muted playsinline preload="metadata"<?= $slide['image_url'] !== '' ? ' poster="' . e($slide['image_url']) . '"' : '' ?> aria-label="Video e produkteve bimore">
-                        <source src="<?= e($slide['video_url']) ?>" type="video/mp4">
+                        <source src="<?= e($slide['video_url']) ?>" type="<?= e($slide['video_type']) ?>">
                     </video>
                 <?php elseif ($slide['image_url'] !== ''): ?>
                     <img src="<?= e($slide['image_url']) ?>" alt="Përzgjedhje produktesh bimore HerbaBloom" fetchpriority="<?= $index === 0 ? 'high' : 'auto' ?>">

@@ -10,9 +10,13 @@ Projekti përdor PHP të renderuar në server dhe jo një aplikacion SPA. Kjo ë
 ```text
 herbabloom/
 ├── admin/
-│   └── ofertat.php      Konfigurimi i seteve dhe URL-ve të imazheve të ofertave
+│   ├── ofertat.php      Konfigurimi i seteve dhe URL-ve të imazheve të ofertave
+│   ├── cilesimet.php    Cilësimet dhe Visual Design Studio për administratorin
+│   ├── _visual_design_studio.php  Kontrollet dhe parapamja e studios së dizajnit
+│   └── visual-design-studio.js    Përditësimi i parapamjes dhe formularit
 ├── web/
 │   ├── _functions.php   Header/footer, karta produktesh, CSRF, sesion, shportë
+│   ├── _design.php      Konfigurimi, validimi dhe CSS-ja e dizajnit të publikuar
 │   ├── index.php        Ballina, kategori reale, produkte të reja/bestseller
 │   ├── produktet.php    Katalogu, filtrat dhe sugjerimet e kërkimit
 │   ├── shporta.php      Gjendja e shportës dhe sasitë
@@ -65,11 +69,15 @@ Klientët ruhen në `me_klientet`, veçmas nga `me_perdoruesit` e stafit. Fjalë
 
 Setet përdorin produkte reale të katalogut dhe çmimin e vendosur nga administratori. Faqja publike nuk sajon zbritje: çmimi i mëparshëm shfaqet vetëm kur totali aktual i përbërësve tejkalon çmimin e konfiguruar të setit. Bestseller-at llogariten nga lëvizjet `shitje` të porosive me status `Dorëzuar`, kështu që përfshihen edhe komponentët e seteve.
 
-Skema për këto funksione gjendet te `database/schema.sql`; për instalimet ekzistuese, migrimi 001 krijon llogaritë/ofertat dhe lidhjen opsionale të porosive, ndërsa migrimi 002 shton kolonën e imazhit të ofertës nëse mungon. Gjashtë setet fillestare përgatiten veçmas te `database/seeds/001_herbabloom_bundles.sql` dhe `database/seeds/002_herbabloom_bundles.sql`, pas krijimit të tabelave dhe importimit të katalogut real. Seed-et aplikohen në databazën lokale vetëm pasi kontrollohen produktet dhe stoku ekzistues.
+Skema për këto funksione gjendet te `database/schema.sql`; për instalimet ekzistuese, migrimi 001 krijon llogaritë/ofertat dhe lidhjen opsionale të porosive, migrimi 002 shton kolonën e imazhit të ofertës nëse mungon, ndërsa migrimi 003 krijon tabelën e Visual Design Studio. Gjashtë setet fillestare përgatiten veçmas te `database/seeds/001_herbabloom_bundles.sql` dhe `database/seeds/002_herbabloom_bundles.sql`, pas krijimit të tabelave dhe importimit të katalogut real. Seed-et aplikohen në databazën lokale vetëm pasi kontrollohen produktet dhe stoku ekzistues.
 
 ### Imazhet dhe videot
 
 Skedarët lokalë mbahen te `web-images/`; slug-et e produkteve/ofertave përdoren për hartëzimin e parazgjedhur të imazheve lokale. Paneli lejon ruajtjen e një URL-je HTTP/HTTPS për imazhin e produktit dhe për imazhin e ofertës; `product_image_path()` dhe `offer_image_path()` përdorin URL-në e ruajtur, ndërsa mungesa e një imazhi të vlefshëm shfaq placeholder. Në databazën lokale, dy produkte dhe një ofertë përdorin URL që drejtojnë te skedarë lokalë në `web-images/`; kjo e bën menaxhimin të mundur nga paneli, pa ndryshuar kodin. URL-të me `localhost` janë për përdorim lokal. Manifesti i skedarëve është te `IMAGE_ASSETS.md`.
+
+### Visual Design Studio
+
+Administratori konfiguron ngjyrat, tipografinë dhe sfondet e dyqanit te cilësimet. Ndryshimet ruhen si draft veçmas nga dizajni i publikuar; parapamja live mund të shfaqë ballinën, katalogun ose detajet e një produkti në përmasa desktop, tablet dhe telefon. Publikimi kërkon konfirmim të veçantë. Konfigurimi publikohet në `me_web_design`; për instalimet ekzistuese kërkohet migrimi `database/migrations/003_visual_design_studio.sql`. Parapamja e draftit lejohet vetëm për administratorin e kyçur.
 
 ## 4. API-ja dhe trajtimi i gjendjeve
 
@@ -151,4 +159,4 @@ Për prezantimin mund të tregohet kodi i kërkimit në `web/store.js`, query i 
 
 **Punë e mbetur për prezantimin/dorëzimin:** përgatit provat me pamje ekrani dhe dorëzoji në dokument Word; zhvillo demonstrimin live me profesorin gjatë prezantimit; konfirmo tekstet dhe pretendimet për biznesin. Asetet vizuale janë për përdorim lokal; për publikimin e tyre në GitHub duhen përdorur vetëm skedarë që ke të drejtë t'i shpërndash. Nuk është planifikuar publikim i aplikacionit në domain; URL-të `localhost` janë për përdorim lokal.
 
-Raportet 1 dhe 2 dhe commit-et e mëparshme gjenden në GitHub. Raportet 3 dhe 4 dhe ndryshimet e ridizajnit në këtë degë janë lokale derisa të rishikohen e publikohen. Udhëzuesi kërkon evidencë testimi, kontrolle sigurie/konfigurimi, si dhe demonstrimin praktik. Funksionet në panel dhe web i kam testuar manualisht; demonstrimi live me profesorin do të zhvillohet në prezantim, ndërsa provat me pamje ekrani do të dorëzohen në dokument Word. Nuk kërkohet URL publike apo hosting, sepse demonstrimi i aplikacionit do të bëhet lokalisht.
+Raportet 1–3 dhe ndryshimet e ridizajnit publikohen me këtë version; raporti 4 nuk përfshihet në këtë publikim. Udhëzuesi kërkon evidencë testimi, kontrolle sigurie/konfigurimi, si dhe demonstrimin praktik. Funksionet në panel dhe web i kam testuar manualisht; demonstrimi live me profesorin do të zhvillohet në prezantim, ndërsa provat me pamje ekrani do të dorëzohen në dokument Word. Nuk kërkohet URL publike apo hosting, sepse demonstrimi i aplikacionit do të bëhet lokalisht.
